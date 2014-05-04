@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 package org.spicefactory.parsley.command.tag {
 
-import org.spicefactory.lib.collection.Map;
 import org.spicefactory.parsley.core.command.ManagedCommandFactory;
 import org.spicefactory.parsley.core.registry.ObjectDefinitionRegistry;
 
@@ -24,24 +23,24 @@ import org.spicefactory.parsley.core.registry.ObjectDefinitionRegistry;
 
 /**
  * Tag for command flows declared in MXML or XML configuration.
- * 
+ *
  * @author Jens Halm
  */
 public class CommandFlowTag extends AbstractCommandParentTag implements NestedCommandTag {
-	
-	
-	/**
-	 * @inheritDoc
-	 */
-	public override function resolve (registry:ObjectDefinitionRegistry) : ManagedCommandFactory {
-		var map:Map = new Map();
-		for each (var tag:NestedCommandTag in commands) {
-			map.put(tag, tag.resolve(registry));
-		}
-		return new Factory(id, map, registry.context);
-	}
-	
-	
+
+
+    /**
+     * @inheritDoc
+     */
+    public override function resolve(registry:ObjectDefinitionRegistry):ManagedCommandFactory {
+        const resolvedTags:Array = new Array();
+        for each (var tag:NestedCommandTag in commands) {
+            resolvedTags.push(new TagFactoryPair(tag, tag.resolve(registry)));
+        }
+        return new Factory(id, resolvedTags, registry.context);
+    }
+
+
 }
 }
 
@@ -60,49 +59,59 @@ import org.spicefactory.parsley.core.command.ManagedCommandProxy;
 import org.spicefactory.parsley.core.context.Context;
 
 class Factory implements ManagedCommandFactory {
-	
-	private var id:String;
-	private var map:Map;
-	private var context:Context;
-	
-	function Factory (id:String, map:Map, context:Context) {
-		this.id = id;
-		this.map = map;
-		this.context = context;
-	}
-	
-	public function newInstance () : ManagedCommandProxy {
-		var flow:CommandFlow = new DefaultCommandFlow();
-		var resolvedMap:Map = new Map();
-		for each (var tag:NestedCommandTag in map.keys) {
-			var factory:ManagedCommandFactory = map.get(tag);
-			var com:ManagedCommandProxy = factory.newInstance();
-			resolvedMap.put(tag, com);
-			resolvedMap.put(com.id, com);
-		}
-		for each (var key:Object in resolvedMap.keys) {
-			var resolvedTag:NestedCommandTag = key as NestedCommandTag;
-			if (!resolvedTag) continue;
-			var command:ManagedCommandProxy = resolvedMap.get(resolvedTag);
-			for each (var linkTag:LinkTag in resolvedTag.links) {
-				var link:CommandLink = linkTag.build(resolvedMap);
-				flow.addLink(command, link);
-			}
-		}
-		flow.setDefaultLink(new DefaultLink());
-		return new DefaultManagedCommandProxy(context, flow, id);
-	}
 
-	public function get type () : ClassInfo {
-		return ClassInfo.forClass(CommandFlow, context.domain);
-	}
-	
+    private var id:String;
+    private var resolvedTags:Array;
+    private var context:Context;
+
+    function Factory(id:String, resolvedTags:Array, context:Context) {
+        this.id = id;
+        this.resolvedTags = resolvedTags;
+        this.context = context;
+    }
+
+    public function newInstance():ManagedCommandProxy {
+        var flow:CommandFlow = new DefaultCommandFlow();
+        var resolvedMap:Map = new Map();
+        for each (var pair:TagFactoryPair in resolvedTags) {
+            var tag:NestedCommandTag = pair.tag;
+            var factory:ManagedCommandFactory = pair.factory;
+            var com:ManagedCommandProxy = factory.newInstance();
+            resolvedMap.put(tag, com);
+            resolvedMap.put(com.id, com);
+        }
+        for each (pair in resolvedTags) {
+            var resolvedTag:NestedCommandTag = pair.tag;
+            var command:ManagedCommandProxy = resolvedMap.get(resolvedTag);
+            for each (var linkTag:LinkTag in resolvedTag.links) {
+                var link:CommandLink = linkTag.build(resolvedMap);
+                flow.addLink(command, link);
+            }
+        }
+        flow.setDefaultLink(new DefaultLink());
+        return new DefaultManagedCommandProxy(context, flow, id);
+    }
+
+    public function get type():ClassInfo {
+        return ClassInfo.forClass(CommandFlow, context.domain);
+    }
+
 }
 
 class DefaultLink implements CommandLink {
 
-	public function link (result:CommandResult, processor:CommandLinkProcessor) : void {
-		processor.complete();
-	}
-	
+    public function link(result:CommandResult, processor:CommandLinkProcessor):void {
+        processor.complete();
+    }
+
+}
+
+class TagFactoryPair {
+    public var tag:NestedCommandTag;
+    public var factory:ManagedCommandFactory;
+
+    public function TagFactoryPair(tag:NestedCommandTag, factory:ManagedCommandFactory) {
+        this.tag = tag;
+        this.factory = factory;
+    }
 }

@@ -3,7 +3,7 @@
 	
 	<property file="build.properties" />
 	
-	<property name="version" value="3.0.0"/>
+	<property name="version" value="3.0.1"/>
 	<property name="project.dir" value="${basedir}/.."/>
 	<property name="release.target.dir" value="${project.dir}/release/${version}"/>
 
@@ -26,7 +26,7 @@
 	</target>
 	
 	<target name="compile-core">
-		<exec executable="${flex3.sdk}/bin/${compc}" dir="${basedir}">
+		<exec executable="${flex4.sdk}/bin/${compc}" dir="${basedir}">
 					
 			<arg line="-load-config=core-metadata.xml" />
 			<arg line="-load-config+=core-config.xml" />
@@ -39,7 +39,7 @@
 	</target>
 	
 	<target name="compile-flex">
-		<exec executable="${flex3.sdk}/bin/${compc}" dir="${basedir}">
+		<exec executable="${flex4.sdk}/bin/${compc}" dir="${basedir}">
 							
 			<arg line="-load-config+=flex-config.xml" />
 
@@ -51,7 +51,7 @@
 	</target>
 	
 	<target name="compile-xml">
-		<exec executable="${flex3.sdk}/bin/${compc}" dir="${basedir}">
+		<exec executable="${flex4.sdk}/bin/${compc}" dir="${basedir}">
 					
 			<arg line="-load-config+=xml-config.xml" />
 
